@@ -114,7 +114,7 @@ export const UserController = {
       username: string;
       password: string;
       level: string;
-      sectionId: string;
+      sectionId: number;
     };
   }) => {
     try {
@@ -145,7 +145,7 @@ export const UserController = {
       const oldUser = await prisma.user.findUnique({
         select: { password: true },
         where: { id: parseInt(params.id) },
-      }); 
+      });
 
       const newData = {
         username: body.username,

@@ -8,11 +8,11 @@ import Swal from "sweetalert2";
 
 export default function Page() {
   // State declarations
-  const [showModal, setShowModal] = useState(false);
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [sections, setSections] = useState([]);
   const [levels, setLevels] = useState(["admin", "user", "engineer"]);
+
   const [id, setId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,19 +21,29 @@ export default function Page() {
   const [departmentId, setDepartmentId] = useState("");
   const [sectionId, setSectionId] = useState("");
 
-  // Initial data fetching
+  const [showModal, setShowModal] = useState(false);
+  
   useEffect(() => {
     fetchUsers();
-    fetchDepartments();
+     
+    //แก้ให้ดึง department ก่อนดึง section 
+    const initializeData = async () => {
+      await fetchDepartments();
+
+      if (departments.length > 0) {
+        const initialDepartmentId = (departments[0] as any).id;
+        setDepartmentId(initialDepartmentId);
+        await fetchSections(initialDepartmentId);
+      }
+    };
+
+    initializeData();
   }, []);
 
   // Fetch departments and sections
   const fetchDepartments = async () => {
     const response = await axios.get(`${config.apiUrl}/api/department/list`);
     setDepartments(response.data);
-    const initialDepartmentId = response.data[0]?.id || "";
-    setDepartmentId(initialDepartmentId);
-    fetchSections(initialDepartmentId);
   };
 
   const fetchSections = async (departmentId: string) => {
@@ -97,7 +107,7 @@ export default function Page() {
     }
   };
 
-  const handleEdit = (user: any) => {
+  const handleEdit = async (user: any) => {
     setId(user.id);
     setUsername(user.username);
     setPassword("");
@@ -106,6 +116,16 @@ export default function Page() {
     setDepartmentId(user?.section?.department?.id || "");
     setSectionId(user?.section?.id || "");
     setShowModal(true);
+
+    //ถ้าเป็น null ให้เลือก department แรก และเลือก section แรก
+    const selectDepartmentId =
+      user?.section?.department?.id ?? (departments[0] as any).id;
+    setDepartmentId(selectDepartmentId);
+
+    await fetchSections(selectDepartmentId);
+
+    const sectionId = user?.section?.id;
+    setSectionId(sectionId);
   };
 
   const handleDelete = async (id: string) => {
