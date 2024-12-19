@@ -7,43 +7,30 @@ import Modal from "@/app/components/modal";
 import Swal from "sweetalert2";
 
 export default function Page() {
-  // State declarations
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [sections, setSections] = useState([]);
-  const [levels, setLevels] = useState(["admin", "user", "engineer"]);
 
+  const [levels, setLevels] = useState(["admin", "user", "engineer"]);
   const [id, setId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [level, setLevel] = useState("admin");
-  const [departmentId, setDepartmentId] = useState("");
   const [sectionId, setSectionId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
 
   const [showModal, setShowModal] = useState(false);
-  
-  useEffect(() => {
-    fetchUsers();
-     
-    //แก้ให้ดึง department ก่อนดึง section 
-    const initializeData = async () => {
-      await fetchDepartments();
 
-      if (departments.length > 0) {
-        const initialDepartmentId = (departments[0] as any).id;
-        setDepartmentId(initialDepartmentId);
-        await fetchSections(initialDepartmentId);
-      }
-    };
+  const fetchUsers = async () => {
+    const response = await axios.get(`${config.apiUrl}/api/user/list`);
+    setUsers(response.data);
+  };
 
-    initializeData();
-  }, []);
-
-  // Fetch departments and sections
   const fetchDepartments = async () => {
     const response = await axios.get(`${config.apiUrl}/api/department/list`);
     setDepartments(response.data);
+    fetchSections(response.data[0].id);
   };
 
   const fetchSections = async (departmentId: string) => {
@@ -51,25 +38,33 @@ export default function Page() {
       `${config.apiUrl}/api/section/listByDepartment/${departmentId}`
     );
     setSections(response.data);
-    setSectionId(response.data[0]?.id || "");
+    setSectionId(response.data[0].id);
   };
 
+  useEffect(() => {
+    fetchUsers();
+    fetchDepartments();
+  }, []);
+  //--------------------------------------------logic---------------------------------
   const handleChangeDepartment = (departmentId: string) => {
     setDepartmentId(departmentId);
     fetchSections(departmentId);
   };
 
-  // Fetch users
-  const fetchUsers = async () => {
-    const response = await axios.get(`${config.apiUrl}/api/user/list`);
-    setUsers(response.data);
+  const clearForm = () => {
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+    setLevel("admin");
+  };
+  const handleShowModal = () => {
+    setShowModal(true);
   };
 
-  // Modal actions
-  const handleShowModal = () => setShowModal(true);
-  const handleCloseModal = () => setShowModal(false);
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
 
-  // CRUD actions
   const handleSave = async () => {
     try {
       if (password !== confirmPassword) {
@@ -82,13 +77,13 @@ export default function Page() {
       }
 
       const payload = {
-        username,
-        password,
-        level,
-        sectionId: parseInt(sectionId, 10),
+        username: username,
+        password: password,
+        level: level,
+        sectionId: parseInt(sectionId),
       };
 
-      if (id === "") {
+      if (id == "") {
         await axios.post(`${config.apiUrl}/api/user/create`, payload);
       } else {
         await axios.put(`${config.apiUrl}/api/user/updateUser/${id}`, payload);
@@ -97,7 +92,6 @@ export default function Page() {
 
       fetchUsers();
       handleCloseModal();
-      clearForm();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -113,52 +107,50 @@ export default function Page() {
     setPassword("");
     setConfirmPassword("");
     setLevel(user.level);
-    setDepartmentId(user?.section?.department?.id || "");
-    setSectionId(user?.section?.id || "");
     setShowModal(true);
 
-    //ถ้าเป็น null ให้เลือก department แรก และเลือก section แรก
-    const selectDepartmentId =
-      user?.section?.department?.id ?? (departments[0] as any).id;
-    setDepartmentId(selectDepartmentId);
+    const selectedDepartmentId =
+      // user?.section?.department?.id ?? (departments[0] as any).id;
+      user.section.department.id;
+    setDepartmentId(selectedDepartmentId);
 
-    await fetchSections(selectDepartmentId);
+    await fetchSections(selectedDepartmentId);
 
-    const sectionId = user?.section?.id;
+    // const sectionId = user?.section?.id;
+    const sectionId = user.section.id;
     setSectionId(sectionId);
   };
 
   const handleDelete = async (id: string) => {
     try {
       const button = await config.confirmDialog();
+
       if (button.isConfirmed) {
         await axios.delete(`${config.apiUrl}/api/user/remove/${id}`);
         fetchUsers();
       }
-    } catch (error: any) {
+    } catch (e: any) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: error.message,
+        text: e.message,
       });
     }
   };
 
-  // Form clear helper
-  const clearForm = () => {
-    setUsername("");
-    setPassword("");
-    setConfirmPassword("");
-    setLevel("admin");
-  };
-
-  // Render
   return (
     <div className="card">
       <h1>พนักงานร้าน</h1>
       <div className="card-body">
-        <button className="btn btn-primary" onClick={handleShowModal}>
-          <i className="fa-solid fa-plus mr-2"></i>เพิ่มข้อมูล
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            clearForm();
+            handleShowModal();
+          }}
+        >
+          <i className="fa-solid fa-plus mr-2"></i>
+          เพิ่มข้อมูล
         </button>
 
         <table className="table table-striped mt-5">
@@ -178,15 +170,17 @@ export default function Page() {
                 <td>{user.level}</td>
                 <td>{user?.section?.department?.name}</td>
                 <td>{user?.section?.name}</td>
-                <td className="text-center">
+                <td className="text-center" style={{ width: "220px" }}>
                   <button className="btn-edit" onClick={() => handleEdit(user)}>
-                    <i className="fa-solid fa-edit mr-2"></i>แก้ไข
+                    <i className="fa-solid fa-edit mr-2"></i>
+                    แก้ไข
                   </button>
                   <button
                     className="btn-delete"
                     onClick={() => handleDelete(user.id)}
                   >
-                    <i className="fa-solid fa-trash mr-2"></i>ลบ
+                    <i className="fa-solid fa-trash mr-2"></i>
+                    ลบ
                   </button>
                 </td>
               </tr>
@@ -198,7 +192,7 @@ export default function Page() {
       <Modal
         title="เพิ่มข้อมูลพนักงาน"
         isOpen={showModal}
-        onClose={handleCloseModal}
+        onClose={() => handleCloseModal()}
       >
         <div className="flex gap-4">
           <div className="w-1/2">
@@ -230,6 +224,7 @@ export default function Page() {
             </select>
           </div>
         </div>
+
         <div className="mt-5">Username</div>
         <input
           type="text"
@@ -237,6 +232,7 @@ export default function Page() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
+
         <div className="mt-5">Password</div>
         <input
           type="password"
@@ -244,6 +240,7 @@ export default function Page() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
         <div className="mt-5">Confirm Password</div>
         <input
           type="password"
@@ -251,6 +248,7 @@ export default function Page() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
+
         <div className="mt-5">Level</div>
         <select
           className="form-control w-full"
@@ -263,8 +261,10 @@ export default function Page() {
             </option>
           ))}
         </select>
+
         <button className="btn btn-primary mt-5" onClick={handleSave}>
-          <i className="fa-solid fa-check mr-2"></i>บันทึก
+          <i className="fa-solid fa-check mr-2"></i>
+          บันทึก
         </button>
       </Modal>
     </div>
