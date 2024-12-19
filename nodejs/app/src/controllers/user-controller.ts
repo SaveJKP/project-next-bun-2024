@@ -186,4 +186,20 @@ export const UserController = {
       return error;
     }
   },
+  listEngineer: async () => {
+    try {
+      const users = await prisma.user.findMany({
+        where: {
+          level: "engineer",
+          status: "active",
+        },
+        orderBy: {
+          username: "asc",
+        },
+      });
+      return users;
+    } catch (error) { 
+      return error;
+    }
+  },
 };

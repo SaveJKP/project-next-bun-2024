@@ -9,10 +9,12 @@ import { RepairRecordController } from "./controllers/repair-controller";
 
 const app = new Elysia()
   .use(cors())
-  .use(jwt({
-    name: "jwt",
-    secret: "secret",
-  }))
+  .use(
+    jwt({
+      name: "jwt",
+      secret: "secret",
+    })
+  )
   .get("/", () => "Hello Elysia")
   .post("/api/user/signin", UserController.signIn)
   .put("/api/user/update", UserController.update)
@@ -20,6 +22,7 @@ const app = new Elysia()
   .post("/api/user/create", UserController.create)
   .put("/api/user/updateUser/:id", UserController.updateUser)
   .delete("/api/user/remove/:id", UserController.remove)
+  .get ("/api/user/listEngineer", UserController.listEngineer)
 
   //
   // repair record
@@ -28,10 +31,14 @@ const app = new Elysia()
   .post("/api/repairRecord/create", RepairRecordController.create)
   .put("/api/repairRecord/update/:id", RepairRecordController.update)
   .delete("/api/repairRecord/remove/:id", RepairRecordController.remove)
-  // 
+  .put("/api/repairRecord/updateStatus/:id", RepairRecordController.updateStatus)
+  //
   // department an section
   .get("/api/department/list", DepartmentController.list)
-  .get("/api/section/listByDepartment/:departmentId", SectionController.listByDepartment)
+  .get(
+    "/api/section/listByDepartment/:departmentId",
+    SectionController.listByDepartment
+  )
 
   //
   // device
@@ -41,7 +48,7 @@ const app = new Elysia()
   .put("/api/device/update/:id", DeviceController.update)
   .delete("/api/device/remove/:id", DeviceController.remove)
 
-  // 
+  //
   // listen
   //
   .listen(3001);
